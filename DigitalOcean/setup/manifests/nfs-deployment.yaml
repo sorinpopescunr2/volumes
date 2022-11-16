@@ -1,0 +1,45 @@
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nfs-server-bns-pvc
+spec:
+  storageClassName: do-block-storage
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+    name: nfs-server-bns
+spec:
+    replicas: 1
+    selector:
+        matchLabels:
+            io.kompose.service: nfs-server-bns
+    template:
+        metadata:
+            labels:
+                io.kompose.service: nfs-server-bns
+        spec:
+            containers:
+                - name: nfs-server-bns
+                  image: itsthenetwork/nfs-server-alpine:latest
+                  volumeMounts:
+                      - name: nfs-storage
+                        mountPath: /nfsshare
+                  env:
+                      - name: SHARED_DIRECTORY
+                        value: "/nfsshare"
+                  ports:
+                      - name: nfs
+                        containerPort: 2049   # <- export port
+                  securityContext:
+                      privileged: true      # <- privileged mode is mandatory.
+            volumes:
+                - name: nfs-storage
+                  persistentVolumeClaim:
+                      claimName: nfs-server-bns-pvc
